@@ -1,0 +1,46 @@
+﻿@page "/"
+@inject AuthenticationStateProvider _authenticationStateProvider;
+@inject NavigationManager _navigationManager;
+@inject Codes.SymmetricEncryption _SymmetricEncryption
+@inject Codes.AsymmetricEncryption _asymmetricEncryption
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")]
+
+<PageTitle>Home</PageTitle>
+
+
+@code {
+
+
+
+    private bool _isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        Codes.HashingHandler hashingHandler = new();
+
+        byte[] valueToHash1AsByte = System.Text.Encoding.UTF8.GetBytes("ThisIsASecretKey2");
+        byte[] hashedValue = hashingHandler.PBKDF2Hashing(valueToHash1AsByte);
+
+        byte[] valueToHash1AsByte2 = System.Text.Encoding.UTF8.GetBytes("ThisIsASecretKey2");
+        byte[] hashedValue2 = hashingHandler.PBKDF2Hashing(valueToHash1AsByte2);
+
+        bool isMatched = hashedValue == hashedValue2;
+
+
+
+        string textToEncrypt = "Koeb Maelk";
+        // var encryptedText = _SymmetricEncryption.Encrypt(textToEncrypt);
+        // var decryptedText = _SymmetricEncryption.Decrypt(encryptedText);
+        string encryptedText = await _asymmetricEncryption.EncryptAsymmetric_webApi(textToEncrypt);
+        var decryptedText = _asymmetricEncryption.DecryptAsymmetric(encryptedText);
+
+
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+            _navigationManager.NavigateTo("/CprNr");
+    }
+}

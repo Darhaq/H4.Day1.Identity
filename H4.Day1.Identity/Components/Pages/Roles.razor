@@ -1,0 +1,62 @@
+﻿@page "/roles"
+﻿@using H4.Day1.Identity.Data
+@using Microsoft.AspNetCore.Identity
+
+@inject IServiceProvider _serviceProvider;
+@inject UserManager<ApplicationUser> UserManager;
+@inject NavigationManager _navigationManager;
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")]
+
+<div class="row">
+    <div class="col-md-3" style="margin: 0 auto;">
+        <h3>Add new roles</h3>
+        <hr />
+        <div style="text-align:left;margin-top:8px;">User: </div>
+        <input type="text" style="width:100%;height:45px;" @bind=@user />
+
+        <div style="text-align:left;margin-top:8px;">Role: </div>
+        <input type="text" style="width:100%;height:45px;" @bind=@role />
+
+        <div style="margin-top:8px;">
+            <input type="button" class="btn-primary" value="Submit" style="width:100%;height:45px;" @onclick="SubmitAsync" />
+        </div>
+
+        @if (message != null && message.Trim() != "")
+        {
+            <div style="margin-top:8px;">
+                @message
+            </div>
+        }
+    </div>
+</div>
+
+
+@code {
+    private string user;
+    private string role;
+    private string? message;
+
+    private async Task SubmitAsync()
+    {
+        message = null;
+
+        try
+        {
+            var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            var userRoleCheck = await roleManager.RoleExistsAsync(role);
+            if (!userRoleCheck)
+                await roleManager.CreateAsync(new IdentityRole(role));
+
+            Data.ApplicationUser identityUser = await UserManager.FindByEmailAsync(user);
+            await UserManager.AddToRoleAsync(identityUser, role);
+
+            _navigationManager.NavigateTo("/");
+        }
+        catch (Exception exc)
+        {
+            message = exc.Message;
+        }
+    }
+}
