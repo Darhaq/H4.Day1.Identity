@@ -16,6 +16,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<HashingHandler>();
 builder.Services.AddScoped<SymmetricEncryption>();
 builder.Services.AddScoped<AsymmetricEncryption>();
 

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace H4.Day1.Identity.Data.Migrations.TodoDb
 {
     [DbContext(typeof(TodoContext))]
-    [Migration("20250827053423_InitialTodoDb")]
+    [Migration("20250828100842_InitialTodoDb")]
     partial class InitialTodoDb
     {
         /// <inheritdoc />

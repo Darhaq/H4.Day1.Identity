@@ -22,14 +22,20 @@ namespace H4.Day1.Identity.Codes
             : Convert.ToBase64String(new HMACSHA256(Encoding.ASCII.GetBytes("ThisIsASecretKey"))
                 .ComputeHash(valueToHash));
 
-        public byte[] PBKDF2Hashing(byte[] valueToHash) =>
-            Rfc2898DeriveBytes.Pbkdf2(
-                valueToHash, 
-                Encoding.UTF8.GetBytes("ThisIsASecretKey2"),
-                10, 
-                HashAlgorithmName.SHA256, 
-                32
-             );
+        public byte[] PBKDF2Hashing(byte[] valueToHash, byte[] salt) => Rfc2898DeriveBytes.Pbkdf2(
+            valueToHash,
+            salt, // Brug det specificerede salt
+            10,
+            HashAlgorithmName.SHA256,
+            32
+        );
+
+        // Tilføj en metode til at generere et consistent salt baseret på brugerens ID
+        public byte[] GetUserSalt(string userId)
+        {
+            // Bruger brugerens ID til at generere et consistent salt
+            return Encoding.UTF8.GetBytes("ThisIsASecretKey2_" + userId);
+        }
 
         #region BCrypt approach 1
 

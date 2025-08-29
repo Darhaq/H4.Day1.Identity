@@ -7,6 +7,8 @@ namespace H4.Day1.Identity.Codes
     {
         private string _publicKey;
         private string _privateKey;
+        public string GetPrivateKey() => _privateKey;
+        public string GetPublicKey() => _publicKey;
 
         public AsymmetricEncryption()
         {

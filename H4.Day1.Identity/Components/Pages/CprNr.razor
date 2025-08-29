@@ -1,28 +1,27 @@
 ﻿@page "/CprNr"
-﻿@using System.ComponentModel.DataAnnotations;
+@using System.ComponentModel.DataAnnotations
 @using H4.Day1.Identity.Data
+@using H4.Day1.Identity.Codes
 
-@inject AuthenticationStateProvider _authenticationStateProvider;
-@inject TodoContext _toDoContext;
-@inject NavigationManager _navigationManager;
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject TodoContext _toDoContext
+@inject NavigationManager _navigationManager
+@inject HashingHandler _hashingHandler
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")]
 
-<h2 style="margin-top:20px;text-decoration:underline;">Validate CRP. NR.</h2>
+<h2 style="margin-top:20px;text-decoration:underline;">Validate CPR. NR.</h2>
 <div class="row">
     <div class="col-md-2" style="margin:0 auto;">
         <div style="margin-top:10px;">
             &nbsp;&nbsp;User: <input type="text" value="@_userName" style="width:150px;border:none;background-color:transparent;text-align:center;" disabled />
         </div>
-
         <div>
             Cpr-nr: <input type="text" @bind="CprNrUserInput" style="width:150px;" />
         </div>
-
         <div style="margin-top:10px;text-align:center;">
             <button class="btn-primary" @onclick="btnSubmitCpr_clicked" style="width:100%;max-width:250px;height:45px;">Submit</button>
         </div>
-
         <div style="margin-top:10px;">
             @if (_cprErrorMessage != null)
             {
@@ -41,30 +40,38 @@
     {
         var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        _userName = user.Identity.Name;
+        _userName = user.Identity?.Name;
         CprNrUserInput = "";
     }
 
     private async Task btnSubmitCpr_clicked()
     {
         var matchedUser = _toDoContext.Cprs.FirstOrDefault(x => x.User == _userName);
+
         if (matchedUser == null)
         {
+            // Gem CPR med BCrypt (håndterer salt automatisk)
+            var hashedCpr = _hashingHandler.BCryptHashing1(CprNrUserInput);
+
             var cpr = new Data.Cpr
-                {
-                    User = _userName,
-                    CprNr = CprNrUserInput
-                };
+            {
+                User = _userName,
+                CprNr = hashedCpr
+            };
             _toDoContext.Cprs.Add(cpr);
             _toDoContext.SaveChanges();
+
+            _navigationManager.NavigateTo("/TodoList", forceLoad: false);
         }
-
-        matchedUser = _toDoContext.Cprs.FirstOrDefault(x => x.User == _userName);
-        bool hashedValueMatch = matchedUser.CprNr == CprNrUserInput;
-
-        if (hashedValueMatch)
-            _navigationManager.NavigateTo("/TodoList");
         else
-            _cprErrorMessage = "Cpr-nr er forkert!";
+        {
+            // Valider CPR med BCrypt
+            bool hashedValueMatch = _hashingHandler.BCryptVerifyHashing1(CprNrUserInput, matchedUser.CprNr);
+
+            if (hashedValueMatch)
+                _navigationManager.NavigateTo("/TodoList", forceLoad: false);
+            else
+                _cprErrorMessage = "Cpr-nr er forkert!";
+        }
     }
 }
