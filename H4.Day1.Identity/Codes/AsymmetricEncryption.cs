@@ -7,24 +7,39 @@ namespace H4.Day1.Identity.Codes
     {
         private string _publicKey;
         private string _privateKey;
-        public string GetPrivateKey() => _privateKey;
-        public string GetPublicKey() => _publicKey;
 
         public AsymmetricEncryption()
         {
-            using (RSA rsa = RSA.Create(2048))
-            {
-                byte[] privateKeyBytes = rsa.ExportRSAPrivateKey();
-                _privateKey =
-                    "-----BEGIN PRIVATE KEY-----\n" +
-                    Convert.ToBase64String(privateKeyBytes, Base64FormattingOptions.InsertLineBreaks) +
-                    "\n-----END PRIVATE KEY-----";
+            string privateKeyFile = "private.key";
+            string publicKeyFile = "public.key";
 
-                byte[] publicKeyBytes = rsa.ExportSubjectPublicKeyInfo();
-                _publicKey =
-                    "-----BEGIN PUBLIC KEY-----\n" +
-                    Convert.ToBase64String(publicKeyBytes, Base64FormattingOptions.InsertLineBreaks) +
-                    "\n-----END PUBLIC KEY-----";
+            if (File.Exists(privateKeyFile) && File.Exists(publicKeyFile))
+            {
+                // Indlæs eksisterende nøgler
+                _privateKey = File.ReadAllText(privateKeyFile);
+                _publicKey = File.ReadAllText(publicKeyFile);
+            }
+            else
+            {
+
+                using (RSA rsa = RSA.Create(2048))
+                {
+                    byte[] privateKeyBytes = rsa.ExportRSAPrivateKey();
+                    _privateKey =
+                        "-----BEGIN PRIVATE KEY-----\n" +
+                        Convert.ToBase64String(privateKeyBytes, Base64FormattingOptions.InsertLineBreaks) +
+                        "\n-----END PRIVATE KEY-----";
+
+                    byte[] publicKeyBytes = rsa.ExportSubjectPublicKeyInfo();
+                    _publicKey =
+                        "-----BEGIN PUBLIC KEY-----\n" +
+                        Convert.ToBase64String(publicKeyBytes, Base64FormattingOptions.InsertLineBreaks) +
+                        "\n-----END PUBLIC KEY-----";
+                }
+
+                // Gem nøglerne i filer
+                File.WriteAllText(privateKeyFile, _privateKey);
+                File.WriteAllText(publicKeyFile, _publicKey);
             }
         }
 
@@ -64,10 +79,15 @@ namespace H4.Day1.Identity.Codes
             using (HttpClient _httpClient = new HttpClient())
             {
                 var response = await _httpClient.PostAsync("https://localhost:7182/encryptor", sc);
-                responseMessage = response.Content.ReadAsStringAsync().Result;
+                responseMessage = await response.Content.ReadAsStringAsync();
             }
 
             return responseMessage;
+        }
+
+        public string GetPublicKey()
+        {
+            return _publicKey;
         }
     }
 }

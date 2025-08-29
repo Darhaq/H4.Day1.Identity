@@ -14,50 +14,84 @@
     <div style="color: green; font-weight: bold; margin: 20px;">
         You are admin!
     </div>
+    <button class="btn btn-primary" @onclick="NavigateToCpr">Fortsæt til CPR</button>
 }
-@if (_isAuthenticated)
+else if (_isAuthenticated)
 {
     <div>Velkommen, du er nu logget ind.</div>
-    <button class="btn btn-primary" @onclick="NavigateToCpr">Fortsæt til CPR</button>
+    <button class="btn btn-primary" @onclick="NavigateToCpr" style="display:none;">Fortsæt til CPR</button>
+}
+
+@if (_errorMessage != null)
+{
+    <div style="color: red; margin: 20px;">@_errorMessage</div>
 }
 
 @code {
     private bool _isAuthenticated;
     private bool _isAdmin;
+    private string? _errorMessage;
+    private bool _shouldNavigate;
 
     protected override async Task OnInitializedAsync()
     {
-        // Existing hashing and encryption code
-        Codes.HashingHandler hashingHandler = new();
-        string valueToHash1 = "33333333";
-        string hashedValue = hashingHandler.BCryptHashing1(valueToHash1);
-
-        string valueToHash2 = "33333333";
-        bool matched = hashingHandler.BCryptVerifyHashing1(valueToHash2, hashedValue);
-
-        //bool isMatched = hashedValue == hashedValue2;
-
-
-        string textToEncrypt = "Køb mælk";
-        // var encryptedText = _SymetricEncryption.Encrypt(textToEncrypt);
-        // var decryptedText = _SymetricEncryption.Decrypt(encryptedText);
-        string encryptedText = await _asymmetricEncryption.EncryptAsymmetric_webApi(textToEncrypt);
-        var decryptedText = _asymmetricEncryption.DecryptAsymmetric(encryptedText);
-
-        // Authentication and role check
-        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        _isAuthenticated = user.Identity.IsAuthenticated;
-        if (_isAuthenticated)
+        try
         {
-            _isAdmin = user.IsInRole("Admin");
-            Logger.LogInformation("User: {UserName}, IsAdmin: {IsAdmin}", user.Identity.Name, _isAdmin);
-            StateHasChanged();
+            // Test hashing code
+            // Codes.HashingHandler hashingHandler = new();
+            // string valueToHash1 = "33333333";
+            // string hashedValue = hashingHandler.BCryptHashing1(valueToHash1);
+            // string valueToHash2 = "33333333";
+            // bool matched = hashingHandler.BCryptVerifyHashing1(valueToHash2, hashedValue);
+
+            // Encryption code
+            
+            // string textToEncrypt = "Køb mælk";
+            // string encryptedText = await _asymmetricEncryption.EncryptAsymmetric_webApi(textToEncrypt);
+            // var decryptedText = _asymmetricEncryption.DecryptAsymmetric(encryptedText);
+            
+
+            var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            _isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+            if (_isAuthenticated)
+            {
+                _isAdmin = user.IsInRole("Admin");
+                Logger.LogInformation("User: {UserName}, IsAdmin: {IsAdmin}", user.Identity?.Name, _isAdmin);
+                if (!_isAdmin)
+                {
+                    _shouldNavigate = true;
+                }
+            }
+            else
+            {
+                Logger.LogWarning("User is not authenticated on Home page.");
+                _shouldNavigate = true; // Navigate to login if not authenticated
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Logger.LogWarning("User is not authenticated on Home page.");
+            _errorMessage = $"An error occurred: {ex.Message}";
+            Logger.LogError(ex, "Error in Home.razor OnInitializedAsync");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _shouldNavigate)
+        {
+            try
+            {
+                string targetUrl = !_isAuthenticated ? "/Account/Login" : "/CprNr";
+                Logger.LogInformation("Navigating to: {TargetUrl} for user: {UserName}", targetUrl, _isAuthenticated ? "Authenticated" : "Unauthenticated");
+                _navigationManager.NavigateTo(targetUrl, forceLoad: false);
+            }
+            catch (Exception ex)
+            {
+                _errorMessage = $"Navigation failed: {ex.Message}";
+                Logger.LogError(ex, "Error during navigation in Home.razor");
+            }
+            _shouldNavigate = false; // Prevent repeated navigation
         }
     }
 

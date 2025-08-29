@@ -1,9 +1,12 @@
 ﻿@page "/TodoList"
+@using H4.Day1.Identity.Codes
 @using H4.Day1.Identity.Data
+@using Microsoft.Extensions.Logging
 
-@inject Data.TodoContext _toDoContext;
-@inject AuthenticationStateProvider _authenticationStateProvider;
-@inject NavigationManager _navigationManager;
+@inject Data.TodoContext _toDoContext
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject Codes.AsymmetricEncryption asymmetricEncryption // Fixed typo 'asymmetriclaEncryption'
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")]
 
@@ -29,14 +32,11 @@
                 </tr>
             </thead>
             <tbody>
-                @if (_TodoListObj != null && _TodoListObj.Count > 0)
+                @foreach (var item in _TodoListObj)
                 {
-                    @foreach (var item in _TodoListObj)
-                    {
-                        <tr>
-                            <td>@item.Item</td>
-                        </tr>
-                    }
+                    <tr>
+                        <td>@(DecryptTodo(item.Item))</td>
+                    </tr>
                 }
             </tbody>
         </table>
@@ -51,21 +51,39 @@
     protected override async Task OnInitializedAsync()
     {
         var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        _userName = authState.User.Identity.Name;
+        _userName = authState.User.Identity?.Name;
 
         var todoDbUser = _toDoContext.Cprs.FirstOrDefault(x => x.User == _userName);
         if (todoDbUser != null)
             _TodoListObj = _toDoContext.Todolists.Where(x => x.UserId == todoDbUser.Id).ToList();
     }
 
-    private void btnSubmitTodoItem_clicked()
+    private async Task btnSubmitTodoItem_clicked() // Changed to async Task
     {
-        var logInUserId = _toDoContext.Cprs.FirstOrDefault(x => x.User == _userName).Id;
+        if (!string.IsNullOrWhiteSpace(_toDoItem))
+        {
+            var logInUserId = _toDoContext.Cprs.FirstOrDefault(x => x.User == _userName)?.Id;
+            if (logInUserId.HasValue)
+            {
+                string encryptedText = await asymmetricEncryption.EncryptAsymmetric_webApi(_toDoItem); // Fixed instance usage
+                var todo = new Data.Todolist { UserId = logInUserId.Value, Item = encryptedText };
 
-        var todo = new Data.Todolist { UserId = logInUserId, Item = _toDoItem };
-        _toDoContext.Todolists.Add(todo);
-        _toDoContext.SaveChanges();
+                _toDoContext.Todolists.Add(todo);
+                await _toDoContext.SaveChangesAsync(); // Changed to async
+                _TodoListObj = _toDoContext.Todolists.Where(x => x.UserId == logInUserId.Value).ToList();
+            }
+        }
+    }
 
-        _TodoListObj = _toDoContext.Todolists.Where(x => x.UserId == logInUserId).ToList();
+    private string DecryptTodo(string encryptedText)
+    {
+        try
+        {
+            return asymmetricEncryption.DecryptAsymmetric(encryptedText);
+        }
+        catch (Exception ex)
+        {
+            return "[Decryption Error]";
+        }
     }
 }
