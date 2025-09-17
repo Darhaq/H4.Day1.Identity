@@ -45,8 +45,8 @@
 
 @code {
     private string? _toDoItem;
-    private string? _userName;
-    private List<Todolist>? _TodoListObj = new List<Todolist>();
+    public string? _userName;
+    public List<Todolist>? _TodoListObj = new List<Todolist>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -65,11 +65,8 @@
             var logInUserId = _toDoContext.Cprs.FirstOrDefault(x => x.User == _userName)?.Id;
             if (logInUserId.HasValue)
             {
-                string encryptedText = await asymmetricEncryption.EncryptAsymmetric_webApi(_toDoItem); // Fixed instance usage
-                var todo = new Data.Todolist { UserId = logInUserId.Value, Item = encryptedText };
-
-                _toDoContext.Todolists.Add(todo);
-                await _toDoContext.SaveChangesAsync(); // Changed to async
+                await asymmetricEncryption.EncryptAsymmetric_webApi(_toDoItem, _userName); // Fixed instance usage
+                
                 _TodoListObj = _toDoContext.Todolists.Where(x => x.UserId == logInUserId.Value).ToList();
             }
         }

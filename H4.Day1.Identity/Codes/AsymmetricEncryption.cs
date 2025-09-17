@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using Microsoft.Extensions.Configuration;
+using System.Net.Http;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace H4.Day1.Identity.Codes
@@ -7,9 +9,14 @@ namespace H4.Day1.Identity.Codes
     {
         private string _publicKey;
         private string _privateKey;
+        private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
 
-        public AsymmetricEncryption()
+        public AsymmetricEncryption(HttpClient httpClient, IConfiguration configuration)
         {
+            _httpClient = httpClient;
+            _configuration = configuration;
+
             string privateKeyFile = "private.key";
             string publicKeyFile = "public.key";
 
@@ -64,23 +71,24 @@ namespace H4.Day1.Identity.Codes
             }
         }
 
-        public async Task<string> EncryptAsymmetric_webApi(string dataToEncrypt)
+        public async Task<string> EncryptAsymmetric_webApi(string dataToEncrypt, string s)
         {
             string? responseMessage = null;
 
-            string[] ar = new string[2] { _publicKey, dataToEncrypt, };
+            string[] ar = new string[3] { _publicKey, dataToEncrypt, s};
             string arSerialized = Newtonsoft.Json.JsonConvert.SerializeObject(ar);
             StringContent sc = new StringContent(
                 arSerialized,
                 System.Text.Encoding.UTF8,
                 "application/json"
             );
+            string testRead = _configuration.GetValue<string>("apitoken");
 
-            using (HttpClient _httpClient = new HttpClient())
-            {
-                var response = await _httpClient.PostAsync("https://localhost:7182/encryptor", sc);
-                responseMessage = await response.Content.ReadAsStringAsync();
-            }
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", testRead);
+
+            var response = await _httpClient.PostAsync("https://localhost:7182/encryptor", sc);
+            responseMessage = await response.Content.ReadAsStringAsync();
 
             return responseMessage;
         }
